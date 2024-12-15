@@ -1,0 +1,32 @@
+ifndef MAKEFILE_THREADS_LOCAL
+define MAKEFILE_THREADS_LOCAL
+yes
+endef
+
+
+SFILES = switch$(HOST_LINUX).s
+
+
+# 如果您添加新文件，您需要将它们添加到 CCFILES 中，
+# 如果您选择制作 .c 文件，您可以定义 CFILES。
+
+CCFILES = main.cc\
+	list.cc\
+	scheduler.cc\
+	synch.cc\
+	synchlist.cc\
+	system.cc\
+	thread.cc\
+	utility.cc\
+	threadtest.cc\
+	synchtest.cc\
+	interrupt.cc\
+	sysdep.cc\
+	stats.cc\
+	timer.cc\
+	threadsbar2.cc
+INCPATH += -I- -I../lab3 -I../threads -I../machine
+
+DEFINES += -DTHREADS
+
+endif # MAKEFILE_THREADS_LOCAL

@@ -1,0 +1,165 @@
+# 这是一个GNU Makefile的一部分，由每个子目录中的Makefile包含。
+#
+# 赋值之间的依赖关系图是：
+#   1. THREADS 在其他所有内容之前
+#   2. USERPROG 必须在 VM 之前
+#   3. USERPROG 可以在 FILESYS 之前或之后，但如果 USERPROG 在前（如本发行版中），
+#      则必须定义 FILESYS_STUB
+#
+# 除此之外，您有完全的灵活性。
+
+# nachos的Makefile几乎完全为Waterloo环境重新设计。
+# 重新设计的重点是同时和自动支持多种架构（MIPS和SPARC），
+# 以及完全自动的依赖关系生成；这两者都大量使用GNU Make的高级特性。
+
+# 要构建nachos，您只需在适当的目录中输入'make'即可。
+# 您可以在顶层的nachos/code目录中输入make并构建所有版本的nachos，
+# 但这可能会超出您的磁盘配额。
+
+# 要构建nachos用户程序，您只需在nachos/code/test目录中输入'make'即可。
+
+# 请参阅文件*/Makefile和*/Makefile.local以了解如何重新排序
+# 赋值，以及如何添加新的源文件。
+
+# 您可能想要调整CFLAGS，但如果使用-O，可能会破坏线程系统。
+# 如果您需要从调试器调用某些内联函数，您可能想使用-fno-inline。
+
+ifndef MAKEFILE_COMMON
+define MAKEFILE_COMMON
+yes
+endef
+
+# Makefile.dep是大多数机器/架构相关内容的地方。
+
+include ../Makefile.dep
+
+# vpath告诉gnu make在目标模式确定的情况下，在哪里查找某些文件，
+# 如果它在当前目录中找不到它们。
+
+vpath %.cc  ../network:../filesys:../vm:../userprog:../threads:../machine
+vpath %.h   ../network:../filesys:../vm:../userprog:../threads:../machine
+vpath %.s   ../network:../filesys:../vm:../userprog:../threads:../machine
+
+
+#CFLAGS = -g -Wall -Wshadow -fwritable-strings $(INCPATH) $(DEFINES) $(HOST) -DCHANGED
+# 注释掉 -fwritable-strings 以使新编译器满意 
+# -ptang, 8/22/05
+CFLAGS = -g -Wall -Wshadow $(INCPATH) $(DEFINES) $(HOST) -DCHANGED
+
+# 变量{C,S,CC}FILES应由调用此makefile的Makefile初始化。
+# ofiles变量用于构建与每个作业对应的不同版本的nachos；
+# 它不被bin或test目录的Makefile使用。
+
+s_ofiles = $(SFILES:%.s=$(obj_dir)/%.o)
+c_ofiles = $(CFILES:%.c=$(obj_dir)/%.o)
+cc_ofiles = $(CCFILES:%.cc=$(obj_dir)/%.o)
+
+ofiles = $(cc_ofiles) $(c_ofiles) $(s_ofiles) 
+
+program = $(bin_dir)/nachos
+
+# 除非调用的Makefile在包含Makefile.common（此文件）之前定义了目标，
+# 否则以下目标将是默认目标。
+
+$(program): $(ofiles)
+
+#
+# 构建各种类型文件的规则
+#
+
+# 可执行文件：我们通过文件前缀$(bin_dir)知道一个文件是可执行文件。
+# 此规则指定如何构建可执行文件，但不指定依赖关系。
+# 依赖关系在其他地方指定。当gmake对给定目标有多个规则时，
+# 它将依赖关系组合在一起，就好像它们都来自一个规则；因此，
+# 下面命令中的$^宏引用此目标的依赖关系，如其他规则所指定的那样。
+# 还要注意，对于给定目标的规则中只能有一个包含构建目标的命令。
+
+$(bin_dir)/% :
+	@echo ">>> 链接" $@ "<<<"
+	$(LD) $^ $(LDFLAGS) -o $@		
+	ln -sf $@ $(notdir $@)
+
+# 从C++源文件（.cc）构建目标文件（.o）。
+# 请参阅上面的可执行文件注释，了解有关多个规则的信息。
+$(obj_dir)/%.o: %.cc
+	@echo ">>> 编译" $< "<<<"
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+# 从C源文件（.c）构建目标文件（.o）。
+# 请参阅上面的可执行文件注释，了解有关多个规则的信息。
+$(obj_dir)/%.o: %.c
+	@echo ">>> 编译" $< "<<<"
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+# 从汇编源文件（.s）构建目标文件（.o）。
+#
+# 我们在将汇编文件传递给汇编器之前，先通过C预处理器处理它们。
+#
+# 请参阅上面的可执行文件注释，了解有关多个规则的信息。
+$(obj_dir)/%.o: %.s
+	@echo ">>> 汇编" $< "<<<"
+	$(CPP) $(CPPFLAGS) $< > $(obj_dir)/tmp.s
+	$(AS) -o $@ $(obj_dir)/tmp.s
+	rm $(obj_dir)/tmp.s
+
+
+# 自动依赖关系生成：请参阅gmake信息文档以获取完整详细信息。
+# 这些内容取代了旧的make depend内容。
+
+# 我们希望为每个源文件（.s，.c，.cc）构建一个.d文件，
+# 该文件包含由gcc/cpp自动生成的make规则。
+# .d文件将在稍后包含在此Makefile中。
+
+s_dfiles = $(SFILES:%.s=$(depends_dir)/%.d)
+c_dfiles = $(CFILES:%.c=$(depends_dir)/%.d)
+cc_dfiles = $(CCFILES:%.cc=$(depends_dir)/%.d)
+
+dfiles = $(cc_dfiles) $(c_dfiles) $(s_dfiles) 
+
+
+# 以下一组规则定义了如何从各种源文件自动构建依赖文件。
+# 这些规则已从gmake文档中提取，并进行了小幅修改。
+
+$(depends_dir)/%.d: %.cc
+	@echo ">>> 为 " $< "构建依赖文件<<<"
+	@$(SHELL) -ec '$(CC) -MM $(CFLAGS) $< \
+	| sed '\''s@$*.o[ ]*:@$(depends_dir)/$(notdir $@) $(obj_dir)/&@g'\'' > $@'
+
+$(depends_dir)/%.d: %.c
+	@echo ">>> 为" $< "构建依赖文件<<<"
+	@$(SHELL) -ec '$(CC) -MM $(CFLAGS) $< \
+	| sed '\''s@$*.o[ ]*:@$(depends_dir)/$(notdir $@) $(obj_dir)/&@g'\'' > $@'
+
+$(depends_dir)/%.d: %.s
+	@echo ">>> 为" $< "构建依赖文件<<<"
+	@$(SHELL) -ec '$(CPP) -MM $(CPPFLAGS) $< \
+	| sed '\''s@$*.o[ ]*:@$(depends_dir)/$(notdir $@) $(obj_dir)/&@g'\'' > $@'
+
+# 包含生成的依赖文件。请注意，gnu make以特殊方式处理这些文件。
+# 每个文件都被视为一种目标。例如，如果$(dfiles)中的某个.d文件依赖于
+# 已重新编译的.c文件，则上述规则将导致.d文件被重新生成。
+# GNU make将检测到这一点，并重新读取makefile，以便.c文件的任何更改
+# 正确反映在依赖关系图中。
+
+# 简而言之，此Makefile将自动推断.{c,cc,s}文件和.h文件之间的完整
+# 最新依赖关系。
+
+include $(dfiles)
+
+# 清除所有生成的文件。注意：这仅清除与当前架构对应的文件。
+
+# 还要注意，当您连续执行两次make clean时，或者在已经清理的目录上执行make clean时，会出现一个怪癖。
+
+# 由于上面的依赖关系内容的工作方式，在执行第二次清理之前，
+# GNU make将重新生成依赖信息，而这些信息在第一次清理时被删除。
+# 最后，第二次清理将删除它刚刚创建的依赖信息……真糟糕。
+
+clean:
+	rm -f `find $(arch_dir) -type f -print | egrep -v '(CVS|cvsignore)'`
+	rm -f nachos coff2noff coff2flat
+	rm -f *.noff *.flat
+
+tmpclean:
+	rm -f tmp*
+
+endif # MAKEFILE_COMMON

@@ -1,0 +1,53 @@
+发件人: cs162@po.EECS.Berkeley.EDU (班级负责人)
+主题: 关于运行作业5的问题的回答
+
+有些人在运行作业5时遇到了问题。
+不幸的是，网络初始化的方式，如果事情没有按照正确的顺序完成，您可能会在发送第一个数据包到套接字时遇到错误。
+
+我已经修改了代码中的 synch.h 和 synch.cc，并重新编译了 code/network 的内容。然后我能够成功运行测试用例，至少有一次成功。请见下文。
+所以，外面要小心！
+
+汤姆
+-----------
+po.EECS.Berkeley.EDU:network>!19
+./nachos -m 0 -o 1 > & log & ; ./nachos -m 1 -o 0 > & log2 &
+[1] 10882
+[2] 10883
+po.EECS.Berkeley.EDU:network>
+[2]    非法指令  ./nachos -m 1 -o 0 >& log2 (核心转储)
+
+[1]    非法指令  ./nachos -m 0 -o 1 >& log (核心转储)
+
+po.EECS.Berkeley.EDU:network>rm -f log* SOCKET*
+po.EECS.Berkeley.EDU:network>!19
+./nachos -m 0 -o 1 > & log & ; ./nachos -m 1 -o 0 > & log2 &
+[1] 10895
+[2] 10896
+po.EECS.Berkeley.EDU:network>
+[1]    完成                 ./nachos -m 0 -o 1 >& log
+
+[2]    完成                 ./nachos -m 1 -o 0 >& log2
+更多日志
+从 1, 邮箱 1 收到 "你好！"
+从 1, 邮箱 1 收到 "收到！"
+机器正在停止！
+
+时钟周期: 总计 57080, 空闲 56810, 系统 270, 用户 0
+磁盘 I/O: 读取 2, 写入 0
+控制台 I/O: 读取 0, 写入 0
+分页: 故障 0
+网络 I/O: 接收的数据包 2, 发送的数据包 2
+
+清理中...
+po.EECS.Berkeley.EDU:network>更多日志2
+从 0, 邮箱 1 收到 "你好！"
+从 0, 邮箱 1 收到 "收到！"
+机器正在停止！
+
+时钟周期: 总计 58530, 空闲 58260, 系统 270, 用户 0
+磁盘 I/O: 读取 2, 写入 0
+控制台 I/O: 读取 0, 写入 0
+分页: 故障 0
+网络 I/O: 接收的数据包 2, 发送的数据包 2
+
+清理中...

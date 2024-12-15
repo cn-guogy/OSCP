@@ -1,0 +1,28 @@
+ifndef MAKEFILE_USERPROG_LOCAL
+define MAKEFILE_USERPROG_LOCAL
+yes
+endef
+
+# 如果您添加新文件，您需要将它们添加到 CCFILES，
+# 如果您选择制作 .c 文件，您可以定义 CFILES。
+# 
+# 确保在这里使用 += 而不是 =。
+
+CCFILES += addrspace.cc\
+	bitmap.cc\
+	exception.cc\
+	progtest.cc\
+	console.cc\
+	machine.cc\
+	mipssim.cc\
+	translate.cc
+
+INCPATH = -I- -I../lab7 -I../bin -I../threads -I../machine -I../userprog -I../filesys
+
+ifdef MAKE_FILE_FILESYS_LOCAL
+DEFINES += -DUSER_PROGRAM
+else
+DEFINES += -DUSER_PROGRAM -DFILESYS_NEEDED -DFILESYS_STUB
+endif
+
+endif # MAKEFILE_USERPROG_LOCAL

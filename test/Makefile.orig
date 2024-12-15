@@ -1,0 +1,73 @@
+#
+# Makefile用于构建用户程序以在Nachos上运行
+#
+# 有几个需要注意的事项：
+#
+#    Nachos假设程序启动例程的位置（内核在程序初始启动时跳转到的位置）
+#       位于位置0。这意味着：start.o必须是传递给ld的第一个.o，
+# 以便例程“Start”能够加载到位置0
+#
+
+# 在滑铁卢的更改：
+#     o 交叉编译现在由Makefile自动处理。
+#         - 在必要时，它假设/software/gcc_nachos存在，
+#           这在cayley、napier、descartes上是正确的。
+
+ifndef MAKEFILE_TEST
+define MAKEFILE_TEST
+yes
+endef
+
+# 机器相关的内容
+include ../Makefile.dep
+
+real_bin_dir := $(bin_dir)
+
+# 如果在不同平台上生成的用户程序是可互换的，
+# 您可以取消注释以下行，然后只有一组用户程序文件将
+# 在架构之间共享。这应该是这样（？）。但是，
+# 似乎至少在SPARC上生成的用户程序
+# 在MIPS版本的nachos上无法正确运行...
+
+#arch = $(mips_arch)
+
+# GCCDIR将在适当时指向交叉编译器的位置。
+
+CC = $(GCCDIR)gcc 
+AS = $(GCCDIR)as 
+LD = $(GCCDIR)ld
+
+# 用户程序。在这里添加您自己的内容。
+# 
+# 注意：约定是每个目标恰好有一个.c文件。
+#        目标是通过编译.c文件并将
+#        相应的.o与start.o链接来构建的。如果您想要每个目标
+#        有多个.c文件，您将需要更改下面的内容。
+
+targets = halt shell matmult sort
+
+# 目标放在特定架构的'bin'目录中。
+
+all = $(targets:%=$(bin_dir)/%) 
+
+all: $(all)
+
+CFILES = $(targets:%=%.c)
+
+SFILES = start.s
+
+include ../Makefile.common
+
+INCDIR =-I../userprog -I../threads
+CFLAGS = -G 0 -c $(INCDIR)
+
+coff2noff = ../bin/$(real_bin_dir)/coff2noff
+
+$(all): $(bin_dir)/% : $(obj_dir)/start.o $(obj_dir)/%.o
+	@echo ">>> 链接" $(obj_dir)/$(notdir $@).coff "<<<"
+	$(LD) $(LDFLAGS) $^ -o $(obj_dir)/$(notdir $@).coff
+	@echo ">>> 转换为noff文件:" $@ "<<<"
+	$(coff2noff) $(obj_dir)/$(notdir $@).coff $@
+	ln -sf $@ $(notdir $@)
+
+endif # MAKEFILE_TEST
